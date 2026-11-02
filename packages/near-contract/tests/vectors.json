@@ -1,0 +1,28 @@
+{
+  "tx": {
+    "chain_id": 84532,
+    "nonce": 7,
+    "max_priority_fee_per_gas": "1000000",
+    "max_fee_per_gas": "2000000000",
+    "gas_limit": 100000,
+    "to": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+    "value": "0",
+    "data_hex": "0xa9059cbb000000000000000000000000111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000004c4b40"
+  },
+  "unsigned_hex": "0x02f86f83014a3407830f42408477359400830186a094036cbd53842c5426634e7929541ec2318f3dcf7e80b844a9059cbb000000000000000000000000111111111111111111111111111111111111111100000000000000000000000000000000000000000000000000000000004c4b40c0",
+  "digest": "0x725298c0cc3da3129f653d3f347c5d43eacb0e7cadbe74c6846cf014ea71ecf1",
+  "long_data": {
+    "hex": "0xabababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab",
+    "unsigned_hex": "0x02f8980180800182520894036cbd53842c5426634e7929541ec2318f3dcf7e80b878ababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababc0",
+    "digest": "0x76b4bb345a35a123dc964f970ba8de47f3f31183cb3f1b404799020a9ec17497"
+  },
+  "attestation": {
+    "signer_address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+    "kind": "provider_tee",
+    "model_id": "test-model/verifier",
+    "request": "{\"model\":\"test-model/verifier\",\"messages\":[{\"role\":\"user\",\"content\":\"TASK: pay the RPC provider\\nTX_DIGEST:0x725298c0cc3da3129f653d3f347c5d43eacb0e7cadbe74c6846cf014ea71ecf1\"}]}",
+    "response": "{\"id\":\"chatcmpl-test\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"tx_digest\\\":\\\"0x725298c0cc3da3129f653d3f347c5d43eacb0e7cadbe74c6846cf014ea71ecf1\\\",\\\"is_aligned\\\":true,\\\"confidence_pct\\\":97}\"}}]}",
+    "signed_text": "test-model/verifier:e31895c5fabde1113d1b2bc31626999d6267d5161db99b747bd5ab23d8783ca9:69c84a7e237f93893fa7a5734fd67f9a2090ab04dd5f498bdbd6e23b2a837f61",
+    "signature": "0x32d19c6c7eaa6e7714e7166f767b5e82e57b2768561e6cf8704bd6e67abcf7bb135fc759037229f0c310cf29350f47e8350689e92e96e3e09ef389e31d1902921c"
+  }
+}

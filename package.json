@@ -1,0 +1,36 @@
+{
+  "name": "bastionkey",
+  "version": "0.1.0",
+  "private": true,
+  "description": "On-chain policy engine and keyless cross-chain wallet firewall for AI agents, built on NEAR Chain Signatures and NEAR AI Cloud (TEE).",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/tee-verifier",
+    "packages/relayer",
+    "packages/web-dashboard"
+  ],
+  "scripts": {
+    "build:contract": "cargo build --manifest-path packages/near-contract/Cargo.toml --target wasm32-unknown-unknown --release",
+    "test:contract": "cargo test --manifest-path packages/near-contract/Cargo.toml",
+    "test:ts": "vitest run",
+    "test": "npm run test:contract && npm run test:ts",
+    "gen:vectors": "tsx scripts/gen-vectors.ts",
+    "demo:valid": "tsx scripts/demo-valid-spend.ts",
+    "demo:overbudget": "tsx scripts/demo-overbudget-spend.ts",
+    "demo:injected": "tsx scripts/demo-injected-spend.ts",
+    "demo:all": "npm run demo:valid && npm run demo:overbudget && npm run demo:injected",
+    "dashboard": "npm --workspace packages/web-dashboard run dev"
+  },
+  "devDependencies": {
+    "@noble/curves": "^1.9.7",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "viem": "^2.21.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

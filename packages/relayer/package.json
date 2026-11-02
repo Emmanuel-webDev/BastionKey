@@ -1,0 +1,12 @@
+{
+  "name": "@bastionkey/relayer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@noble/curves": "^1.9.7",
+    "chainsig.js": "^1.1.11",
+    "viem": "^2.21.0"
+  }
+}
