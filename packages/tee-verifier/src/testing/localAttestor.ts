@@ -1,16 +1,11 @@
 /**
- * LOCAL STAND-IN for the NEAR AI Cloud verifier, so the demos reproduce offline with no API key.
- *
- * This is NOT an LLM and NOT a TEE. It is a deterministic rule: the task must name both the
- * recipient address and the amount that the transaction pays. It signs its verdict in exactly the
- * NEAR AI Cloud format (EIP-191 over "<model>:<sha256 req>:<sha256 resp>"), so the contract's real
- * verification path runs unchanged. Its key is a public test key and carries no security.
+ * LOCAL STAND-IN for testing only. Not used in production.
  */
 import { createHash } from "node:crypto";
 import { privateKeyToAccount } from "viem/accounts";
-import { buildRequestBody, type VerifierInput } from "./prompt.js";
-import { readVerdict, signedText, type Attestation } from "./teeAttestation.js";
-import type { Verifier, VerifierResult } from "./semanticChecker.js";
+import { buildRequestBody, type VerifierInput } from "../prompt.js";
+import { readVerdict, signedText, type Attestation } from "../teeAttestation.js";
+import type { Verifier, VerifierResult } from "../semanticChecker.js";
 
 export const LOCAL_ATTESTOR_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as const;
 export const LOCAL_ATTESTOR_MODEL = "bastionkey-local/rule-verifier";

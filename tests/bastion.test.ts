@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { recoverMessageAddress } from "viem";
-import { LocalAttestor, extractJsonObject, verifyAttestation, signedText } from "@bastionkey/tee-verifier";
-import { BASE_SEPOLIA, buildErc20Transfer, decodeTransfer, unsignedDigest, usd, LocalMpc, signatureFromMpc, signedRawTx } from "@bastionkey/relayer";
+import { extractJsonObject, verifyAttestation, signedText } from "@bastionkey/tee-verifier";
+import { LocalAttestor } from "../packages/tee-verifier/src/testing/localAttestor.js";
+import { BASE_SEPOLIA, buildErc20Transfer, decodeTransfer, unsignedDigest, usd, signatureFromMpc, signedRawTx } from "@bastionkey/relayer";
+import { LocalMpc } from "../packages/relayer/src/testing/localMpc.js";
 import { recoverTransactionAddress, type Address, type Hex } from "viem";
 
 const GOOD = "0x1111111111111111111111111111111111111111" as Address;

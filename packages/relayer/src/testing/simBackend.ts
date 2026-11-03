@@ -1,47 +1,17 @@
 /**
- * Talks to the native simulator (packages/near-contract/examples/sim.rs), which runs the real
- * BastionKey contract code under near-sdk's mock VM. See that file for what it is and is not.
+ * Talks to the native simulator (packages/near-contract/examples/sim.rs). Test only.
  */
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
-import type { BastionTx } from "./evmTx.js";
+import type { BastionTx } from "../evmTx.js";
+import type { PolicyJson, TeeAttestationJson, SignOutcomeJson } from "../types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const contractDir = join(here, "..", "..", "near-contract");
+const contractDir = join(here, "..", "..", "..", "near-contract");
 const simBin = join(contractDir, "target", "debug", "examples", "sim");
-
-export interface PolicyJson {
-  max_per_tx: string;
-  hourly_budget: string;
-  max_gas_cost_wei: string;
-  allowed_tokens: string[];
-  allowed_recipients: string[];
-  allowed_chain_ids: number[];
-  tee_required_above: string;
-  min_confidence_pct: number;
-  max_calls_per_minute: number;
-}
-
-export interface TeeAttestationJson {
-  kind: string;
-  model_id: string | null;
-  /** base64 of the exact request body bytes */
-  request: string;
-  /** base64 of the exact response body bytes */
-  response: string;
-  signature: string;
-}
-
-export interface SignOutcomeJson {
-  status: "APPROVED" | "REJECTED" | "FROZEN" | "SIGN_FAILED";
-  code: string | null;
-  reason: string | null;
-  digest: string | null;
-  signature: unknown;
-}
 
 export type CallResult =
   | { kind: "value"; outcome: SignOutcomeJson }

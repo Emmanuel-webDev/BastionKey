@@ -1,38 +1,37 @@
 /**
- * Shared harness for the three judge-facing demos.
+ * Shared harness for BastionKey demos running against NEAR Testnet.
  *
- * What runs for real in every demo:
- *   - the BastionKey policy contract code (native build of the same Rust that compiles to wasm,
- *     under near-sdk's mock VM; see packages/near-contract/examples/sim.rs)
- *   - on-chain TEE-signature verification (EIP-191 recovery, digest binding)
- *   - EVM transaction construction and signature assembly, using viem and chainsig.js
- *
- * What is a local stand-in (clearly labelled in the output):
- *   - the NEAR MPC network (v1.signer-prod.testnet)  -> LocalMpc
- *   - the NEAR AI Cloud TEE verifier                 -> LocalAttestor (unless BASTION_VERIFIER=nearai)
+ * Runs exclusively in live mode against the deployed BastionKey policy contract,
+ * NEAR MPC network (v1.signer-prod.testnet), and NEAR AI Cloud (TEE).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 try { process.loadEnvFile?.(); } catch {}
+
+import { connect, keyStores, KeyPair, providers } from "near-api-js";
+import { chainAdapters, contracts } from "chainsig.js";
 import { keccak256, recoverTransactionAddress, type Address, type Hex } from "viem";
 import {
   BASE_SEPOLIA,
-  LocalMpc,
-  SimBackend,
   buildErc20Transfer,
   decodeTransfer,
   signatureFromMpc,
   signedRawTx,
   unsignedDigest,
   usd,
+  type EvmTx,
+  type MpcSignature,
   type PolicyJson,
 } from "@bastionkey/relayer";
-import { LocalAttestor, NearAiVerifier, fetchSigningAddress, type Verifier } from "@bastionkey/tee-verifier";
+import {
+  NearAiVerifier,
+  fetchSigningAddress,
+  type Attestation,
+  type Verifier,
+} from "@bastionkey/tee-verifier";
 
-export const OWNER = "owner.testnet";
-export const AGENT = "agent-1.bastion.testnet";
 export const SIGNER_CONTRACT = "v1.signer-prod.testnet";
 export const DERIVATION_PATH = "agent-session-1";
 export const RPC_PROVIDER = "0x1111111111111111111111111111111111111111" as Address;
@@ -43,92 +42,136 @@ export type Tag = "APPROVED" | "REJECTED_ON_CHAIN" | "BLOCKED_BY_TEE";
 export interface Scenario {
   name: string;
   title: string;
-  /** closed = recipient allow-list; open = any recipient, so only the TEE check can catch a bad one */
   recipients: "closed" | "open";
   task: string;
   actionLog: string[];
   recipient: Address;
-  /** USDC, whole dollars */
   dollars: number;
   expect: Tag;
 }
 
-export function policyFor(kind: "closed" | "open"): PolicyJson {
-  return {
-    max_per_tx: "50000000", // $50.00
-    hourly_budget: "100000000", // $100.00
-    max_gas_cost_wei: "10000000000000000", // 0.01 ETH
-    allowed_tokens: [BASE_SEPOLIA.usdc],
-    allowed_recipients: kind === "closed" ? [RPC_PROVIDER] : [],
-    allowed_chain_ids: [BASE_SEPOLIA.chainId],
-    tee_required_above: "0", // every transfer needs a TEE verdict
-    min_confidence_pct: 80,
-    max_calls_per_minute: 20,
-  };
+export interface ContractConfig {
+  owner: string;
+  signer_contract: string;
+  provider_tee_signer: string | null;
+  gateway_signer: string | null;
+  sign_format: string;
+  sign_deposit: string;
+  sign_gas_tgas: number;
 }
 
-async function pickVerifier(): Promise<{ verifier: Verifier; signer: string; mode: string }> {
-  if (process.env.BASTION_VERIFIER === "nearai") {
-    const apiKey = process.env.NEARAI_API_KEY;
-    if (!apiKey) throw new Error("BASTION_VERIFIER=nearai needs NEARAI_API_KEY");
-    const model = process.env.NEARAI_MODEL ?? "deepseek-ai/DeepSeek-V3.1";
-    const { address } = await fetchSigningAddress({ apiKey, model });
-    if (!address) throw new Error("could not read signing_address from the NEAR AI Cloud attestation report");
-    return { verifier: new NearAiVerifier({ apiKey, model }), signer: address, mode: "NEAR AI Cloud (live)" };
-  }
-  const local = new LocalAttestor();
-  return { verifier: local, signer: local.address, mode: "local stand-in" };
+export interface SignOutcomeResponse {
+  status: "APPROVED" | "REJECTED" | "FROZEN" | "SIGN_FAILED";
+  code?: string;
+  reason?: string;
+  digest?: string;
+  signature?: MpcSignature;
 }
 
 const line = (s = "") => console.log(s);
 
-export async function runScenario(s: Scenario): Promise<void> {
-  if ((process.env.BASTION_MODE ?? "local") !== "local") {
-    console.error("BASTION_MODE=testnet is not implemented yet. Run with BASTION_MODE=local (default).");
-    process.exit(2);
+function requireEnv(name: string): string {
+  const val = process.env[name];
+  if (!val || val.trim() === "") {
+    throw new Error(
+      `Missing required environment variable: ${name}. Set it in .env to run against testnet. Local simulation is disabled.`,
+    );
   }
+  return val.trim();
+}
+
+export async function runScenario(s: Scenario): Promise<void> {
+  const mode = process.env.BASTION_MODE ?? "testnet";
+  if (mode !== "testnet") {
+    throw new Error(`BASTION_MODE="${mode}" is unsupported. BastionKey runs only against the live testnet contract.`);
+  }
+
+  const contractId = requireEnv("BASTION_CONTRACT_ID");
+  const agentId = requireEnv("AGENT_ACCOUNT_ID");
+  const agentPrivateKey = requireEnv("AGENT_PRIVATE_KEY");
+  const apiKey = requireEnv("NEARAI_API_KEY");
+  const model = process.env.NEARAI_MODEL ?? "deepseek-ai/DeepSeek-V3.1";
+  const networkId = process.env.NEAR_NETWORK ?? "testnet";
+  const nodeUrl = `https://rpc.${networkId}.near.org`;
 
   const events: Array<Record<string, unknown>> = [];
   const log = (kind: string, data: Record<string, unknown>) => events.push({ t: new Date().toISOString(), kind, ...data });
 
-  const sim = SimBackend.start();
   let finalTag: Tag | "ERROR" = "ERROR";
+
   try {
-    const { verifier, signer, mode } = await pickVerifier();
-    const mpc = new LocalMpc("bastionkey-demo-seed");
-    const policy = policyFor(s.recipients);
-
-    await sim.init(OWNER, SIGNER_CONTRACT);
-    await sim.setTeeSigner(signer);
-    await sim.registerAgent(AGENT, DERIVATION_PATH, policy);
-
-    const eoa = mpc.address(DERIVATION_PATH);
     line(`=== BastionKey demo: ${s.title} ===`);
-    line(
-      `mode: contract=real BastionKey code (native, near-sdk mock VM) | MPC signer=local stand-in for ${SIGNER_CONTRACT} | verifier=${mode}`,
-    );
-    line(`[INFO] agent account : ${AGENT} (holds a Function Call Key only; no private key on any chain)`);
+    line(`mode: LIVE TESTNET | contract=${contractId} | MPC=${SIGNER_CONTRACT} | verifier=NEAR AI Cloud`);
+
+    // 1. Connect to NEAR Testnet with the agent's Function Call Key
+    const keyStore = new keyStores.InMemoryKeyStore();
+    const keyPair = KeyPair.fromString(agentPrivateKey);
+    await keyStore.setKey(networkId, agentId, keyPair);
+    const near = await connect({ networkId, nodeUrl, keyStore });
+    const agentAccount = await near.account(agentId);
+
+    // 2. Fetch contract configuration and check TEE signer pin
+    const config = (await agentAccount.viewFunction({
+      contractId,
+      methodName: "get_config",
+      args: {},
+    })) as ContractConfig;
+    log("contract_config", config as unknown as Record<string, unknown>);
+
+    const { address: liveTeeSigner } = await fetchSigningAddress({ apiKey, model });
+    if (!liveTeeSigner) {
+      throw new Error(`Could not obtain signing_address from NEAR AI Cloud attestation report for ${model}`);
+    }
+
+    if (config.provider_tee_signer) {
+      const pinned = "0x" + config.provider_tee_signer.toLowerCase().replace(/^0x/, "");
+      if (pinned !== liveTeeSigner.toLowerCase()) {
+        throw new Error(
+          `Contract pinned TEE signer (${pinned}) does not match current NEAR AI Cloud attestation report signer (${liveTeeSigner}).`,
+        );
+      }
+    }
+
+    const verifier: Verifier = new NearAiVerifier({ apiKey, model });
+
+    // 3. Derive agent's foreign EVM address via chainsig.js
+    const csContract = new contracts.ChainSignatureContract({
+      network: networkId,
+      contractId: config.signer_contract || SIGNER_CONTRACT,
+    });
+    const evmAdapter = new chainAdapters.evm.EVM({ contract: csContract });
+    const { address: eoa } = await evmAdapter.deriveAddressAndPublicKey(DERIVATION_PATH, contractId);
+
+    line(`[INFO] agent account : ${agentId} (holds a Function Call Key on ${contractId})`);
     line(`[INFO] derived EOA   : ${eoa} on Base Sepolia (${BASE_SEPOLIA.chainId}), path "${DERIVATION_PATH}"`);
-    line(
-      `[INFO] policy        : max_per_tx ${usd(policy.max_per_tx)}, hourly ${usd(policy.hourly_budget)}, recipients ${
-        s.recipients === "closed" ? "allow-list (1)" : "OPEN, TEE verdict mandatory"
-      }`,
-    );
     line(`[INFO] task          : ${s.task}`);
     s.actionLog.forEach((l) => line(`[INFO] agent log     : ${l}`));
-    log("setup", { agent: AGENT, eoa, policy, task: s.task, actionLog: s.actionLog });
+    log("setup", { agent: agentId, eoa, task: s.task, actionLog: s.actionLog });
 
-    // 1. the agent builds a transaction
-    const tx = buildErc20Transfer({ nonce: 1, recipient: s.recipient, amount: BigInt(s.dollars) * 1_000_000n });
+    // 4. Build proposed ERC-20 transfer
+    const tx: EvmTx = buildErc20Transfer({
+      nonce: 1,
+      recipient: s.recipient,
+      amount: BigInt(s.dollars) * 1_000_000n,
+    });
     const digest = unsignedDigest(tx);
-    const onChainDigest = await sim.previewDigest(tx);
-    if (onChainDigest !== digest) throw new Error(`digest mismatch: relayer ${digest} vs contract ${onChainDigest}`);
     const decoded = decodeTransfer(tx);
+
+    // Verify relayer and contract agreement on transaction digest
+    const onChainDigest = (await agentAccount.viewFunction({
+      contractId,
+      methodName: "preview_digest",
+      args: { tx },
+    })) as string;
+
+    if (onChainDigest.toLowerCase() !== digest.toLowerCase()) {
+      throw new Error(`Digest mismatch: relayer ${digest} vs on-chain contract ${onChainDigest}`);
+    }
     line(`[INFO] proposed tx   : transfer ${usd(decoded.amount)} USDC -> ${decoded.recipient}`);
     line(`[CHECK] relayer and contract compute the same tx digest: ${digest}`);
     log("proposed", { recipient: decoded.recipient, amount: decoded.amount.toString(), digest });
 
-    // 2. the verifier inspects the exact bytes against the task
+    // 5. Verifier checks semantic alignment against the task
     const v = await verifier.verify({
       task: s.task,
       actionLog: s.actionLog,
@@ -146,54 +189,69 @@ export async function runScenario(s: Scenario): Promise<void> {
     );
     log("verdict", { ...v.verdict, signer: v.signer, label: verifier.label });
 
-    // 3. the agent asks the contract for a signature
-    const res = await sim.call(AGENT, Math.floor(Date.now() / 1000), tx, v.attestation);
-    log("contract_result", res as unknown as Record<string, unknown>);
+    // 6. Call request_signature on the deployed contract
+    line(`[INFO] calling ${contractId}.request_signature as ${agentId}...`);
+    const txResult = await agentAccount.functionCall({
+      contractId,
+      methodName: "request_signature",
+      args: {
+        tx,
+        tee: v.attestation,
+      },
+      gas: 300_000_000_000_000n, // 300 Tgas
+      attachedDeposit: 0n,
+    });
 
-    if (res.kind === "value") {
-      const o = res.outcome;
-      if (o.code === "SEMANTIC_MISMATCH") {
-        finalTag = "BLOCKED_BY_TEE";
-        line(`[BLOCKED_BY_TEE] SemanticMismatch: ${v.verdict.reason ?? "calldata does not serve the task"}. Attestation DENIED. No signature was produced.`);
-      } else if (o.code === "MAX_PER_TX") {
-        finalTag = "REJECTED_ON_CHAIN";
-        line(
-          `[REJECTED_ON_CHAIN] NearPolicyError: Exceeds max_per_tx limit (${usd(policy.max_per_tx)}); requested ${usd(decoded.amount)}. MPC signing HALTED.`,
-        );
-      } else {
-        finalTag = "REJECTED_ON_CHAIN";
-        line(`[REJECTED_ON_CHAIN] ${o.reason} (code ${o.code}). MPC signing HALTED.`);
-      }
-    } else {
-      // approved: the contract asked the MPC signer to sign. Check it asked for the right thing.
-      const req = res.args.request;
-      const payload = "0x" + Buffer.from(req.payload).toString("hex");
-      if (res.receiver !== SIGNER_CONTRACT || res.method !== "sign") throw new Error("contract called the wrong signer");
-      if (payload !== digest || req.path !== DERIVATION_PATH) throw new Error("contract asked to sign the wrong payload");
-      line(`[CHECK] contract called ${res.receiver}.${res.method} with the approved digest and path "${req.path}"`);
+    const outcome = providers.getTransactionLastResult(txResult) as SignOutcomeResponse;
+    log("contract_result", outcome as unknown as Record<string, unknown>);
 
-      const mpcResponse = await mpc.sign(digest as Hex, req.path);
-      const raw = signedRawTx(tx, signatureFromMpc(mpcResponse));
-      const recovered = await recoverTransactionAddress({ serializedTransaction: raw as `0x02${string}` });
-      if (recovered.toLowerCase() !== eoa.toLowerCase()) throw new Error("signature does not recover to the derived EOA");
+    if (outcome.status === "APPROVED") {
       finalTag = "APPROVED";
+      if (!outcome.signature) {
+        throw new Error("Contract returned APPROVED status but no MPC signature was provided.");
+      }
+      const raw = signedRawTx(tx, signatureFromMpc(outcome.signature));
+      const recovered = await recoverTransactionAddress({ serializedTransaction: raw as `0x02${string}` });
+      if (recovered.toLowerCase() !== eoa.toLowerCase()) {
+        throw new Error(`Recovered address ${recovered} does not match derived EOA ${eoa}`);
+      }
+      const txHash = keccak256(raw);
+      line(`[APPROVED] On-chain rules PASSED. TEE semantic alignment PASSED.`);
+      line(`[APPROVED] Base Sepolia Tx Signed via NEAR MPC: ${txHash}`);
+      line(`[INFO] signature recovers to derived EOA ${recovered}`);
+      log("signed", { raw, txHash, recovered });
+    } else if (outcome.code === "SEMANTIC_MISMATCH") {
+      finalTag = "BLOCKED_BY_TEE";
       line(
-        `[APPROVED] On-chain rules PASSED. TEE semantic alignment PASSED. Base Sepolia Tx Signed via MPC (local stand-in): ${keccak256(raw)}`,
+        `[BLOCKED_BY_TEE] SemanticMismatch: ${outcome.reason ?? v.verdict.reason ?? "calldata does not serve the task"}. Attestation DENIED. No signature was produced.`,
       );
-      line(`[INFO] signature recovers to the derived EOA ${recovered}; transaction was not broadcast`);
-      log("signed", { raw, txHash: keccak256(raw), recovered });
+    } else if (outcome.code === "MAX_PER_TX") {
+      finalTag = "REJECTED_ON_CHAIN";
+      line(`[REJECTED_ON_CHAIN] NearPolicyError: ${outcome.reason ?? "Exceeds max_per_tx limit"}. MPC signing HALTED.`);
+    } else {
+      finalTag = "REJECTED_ON_CHAIN";
+      line(`[REJECTED_ON_CHAIN] ${outcome.reason ?? outcome.status} (code ${outcome.code ?? "UNKNOWN"}). MPC signing HALTED.`);
     }
 
-    const view = await sim.view(AGENT, Math.floor(Date.now() / 1000));
-    line(
-      `[INFO] agent state   : approvals=${view.approvals} rejections=${view.rejections} spent_last_hour=${usd(view.spent_last_hour)} remaining=${usd(view.remaining_hourly_budget)}`,
-    );
-    log("final_state", view);
+    // 7. Query updated agent state on-chain
+    try {
+      const view = await agentAccount.viewFunction({
+        contractId,
+        methodName: "get_agent",
+        args: { agent_account: agentId },
+      });
+      line(
+        `[INFO] agent state   : approvals=${view.approvals} rejections=${view.rejections} spent_last_hour=${usd(
+          view.spent_last_hour,
+        )} remaining=${usd(view.remaining_hourly_budget)}`,
+      );
+      log("final_state", view);
+    } catch {
+      // view query might fail if agent view is omitted
+    }
   } catch (e) {
     line(`[ERROR] ${(e as Error).message}`);
     log("error", { message: (e as Error).message });
-  } finally {
-    sim.close();
   }
 
   const out = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "demo-output");

@@ -18,28 +18,6 @@ export interface MpcSignature {
   recovery_id: number;
 }
 
-export class LocalMpc {
-  constructor(private readonly seed: string) {}
-
-  private key(path: string): Hex {
-    return keccak256(toBytes(`bastionkey-local-mpc|${this.seed}|${path}`));
-  }
-
-  address(path: string): Address {
-    return privateKeyToAccount(this.key(path)).address;
-  }
-
-  async sign(digest: Hex, path: string): Promise<MpcSignature> {
-    const sig = await sign({ hash: digest, privateKey: this.key(path), to: "object" });
-    const yParity = Number(sig.yParity ?? (sig.v === 28n ? 1 : 0));
-    return {
-      big_r: { affine_point: (yParity === 0 ? "02" : "03") + sig.r.slice(2) },
-      s: { scalar: sig.s.slice(2) },
-      recovery_id: yParity,
-    };
-  }
-}
-
 const hex32 = (h: string): Hex => `0x${h.replace(/^0x/, "").padStart(64, "0")}`;
 
 export function signatureFromMpc(resp: MpcSignature): { r: Hex; s: Hex; yParity: 0 | 1 } {
