@@ -1,0 +1,19 @@
+{
+  "name": "@bastionkey/cli",
+  "version": "0.1.0",
+  "description": "BastionKey Policy & Management CLI",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "bastion": "./bin/bastion.js"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@bastionkey/client": "*",
+    "@bastionkey/relayer": "*",
+    "near-api-js": "^7.2.0",
+    "viem": "^2.21.0"
+  }
+}

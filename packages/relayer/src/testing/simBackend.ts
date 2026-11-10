@@ -29,7 +29,7 @@ export class SimBackend {
       const r = spawnSync("cargo", ["build", "--quiet", "--example", "sim"], { cwd: contractDir, stdio: "inherit" });
       if (r.status !== 0) throw new Error("failed to build the contract simulator (is the Rust toolchain installed?)");
     }
-    // the mock VM prints contract logs to stderr; they are noise for the demos
+    // the mock VM prints contract logs to stderr; they are noise for the test runner
     return new SimBackend(spawn(simBin, [], { stdio: ["pipe", "pipe", "ignore"] }));
   }
 

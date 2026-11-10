@@ -2,7 +2,7 @@
  * MPC signer side of the relayer.
  *
  * - `LocalMpc` is a LOCAL STAND-IN for the NEAR MPC network (v1.signer-prod.testnet). It holds
- *   plain secp256k1 keys derived from a seed so demos run offline. It emits the same response
+ *   plain secp256k1 keys derived from a seed so tests run offline. It emits the same response
  *   shape the real signer returns, so the conversion code below runs unchanged against both.
  *   It is not threshold-secure and must never be used with real funds.
  * - `signatureFromMpc` converts a signer response to an Ethereum signature using chainsig.js.

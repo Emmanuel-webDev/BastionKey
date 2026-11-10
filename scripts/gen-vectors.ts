@@ -66,8 +66,8 @@ const unsignedLong = serializeTransaction({
   accessList: [],
 });
 
-// Attestation signed by a fixed, public, test-only key.
-const TEST_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as const;
+// Attestation signed by a fixed, public, test-only key (Hardhat/Anvil account #1).
+const TEST_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as const; // gitleaks:allow - test-only vector key
 const account = privateKeyToAccount(TEST_KEY);
 const model = "test-model/verifier";
 const request = JSON.stringify({

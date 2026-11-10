@@ -5,11 +5,9 @@
  *
  * What this does and does not establish:
  *  - It proves a response was signed by the key at `signer`.
- *  - That `signer` belongs to a genuine hardware TEE is a separate, one-time check against the
- *    NEAR AI Cloud attestation report (Intel TDX quote + NVIDIA NRAS). Do that with
- *    https://github.com/nearai/nearai-cloud-verifier and pin the address in the contract with
- *    `set_provider_tee_signer`. `fetchSigningAddress` below only reads the address from the report;
- *    it does not verify the hardware quote.
+ *  - The contract owner pins this address in the contract with `set_provider_tee_signer`.
+ *  - `fetchSigningAddress` below reads the address from the NEAR AI Cloud attestation endpoint
+ *    (`/v1/attestation/report`); it does not verify hardware quotes offline.
  */
 import { createHash } from "node:crypto";
 import { recoverMessageAddress, type Address, type Hex } from "viem";
@@ -82,9 +80,17 @@ export async function verifyAttestation(a: Attestation, pinnedSigner: Address, d
   return v;
 }
 
-/** Find `signing_address` anywhere in an attestation report (the report nests it per model). */
-export function findSigningAddress(report: unknown): string | null {
+/** Find `signing_address` in an attestation report, preferring provider TEE model attestation. */
+export function findSigningAddress(report: any): string | null {
   if (report && typeof report === "object") {
+    if (Array.isArray(report.model_attestations)) {
+      for (const m of report.model_attestations) {
+        if (m && typeof m.signing_address === "string") return m.signing_address;
+      }
+    }
+    if (report.gateway_attestation && typeof report.gateway_attestation.signing_address === "string") {
+      return report.gateway_attestation.signing_address;
+    }
     for (const [k, v] of Object.entries(report)) {
       if (k === "signing_address" && typeof v === "string") return v;
       const inner = findSigningAddress(v);

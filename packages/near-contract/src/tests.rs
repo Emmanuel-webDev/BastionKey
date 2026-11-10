@@ -242,7 +242,7 @@ fn erc20_decoder_rejects_malformed_calldata() {
     assert!(decode_erc20_transfer(&huge).is_err());
 }
 
-// ---------------------------------------------------------------- demo 1: valid
+// ---------------------------------------------------------------- scenario 1: valid
 
 #[test]
 fn valid_aligned_spend_is_approved_and_calls_the_mpc_signer() {
@@ -267,7 +267,7 @@ fn large_transfer_needs_a_tee_verdict_and_passes_with_one() {
     assert!(call(&mut c, 2_002, tx, Some(att)).is_none());
 }
 
-// ---------------------------------------------------------------- demo 2: over budget
+// ---------------------------------------------------------------- scenario 2: over budget
 
 #[test]
 fn over_cap_transfer_is_rejected_on_chain() {
@@ -291,7 +291,7 @@ fn rolling_hourly_budget_blocks_then_frees_up() {
     assert!(call(&mut c, 2_000 + 3_601, make_tx(RPC_PROVIDER, usdc(20), 4), None).is_none());
 }
 
-// ---------------------------------------------------------------- demo 3: injected
+// ---------------------------------------------------------------- scenario 3: injected
 
 #[test]
 fn injected_transfer_to_attacker_is_blocked_by_tee_verdict() {

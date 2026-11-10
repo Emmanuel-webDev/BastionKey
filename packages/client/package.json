@@ -1,0 +1,14 @@
+{
+  "name": "@bastionkey/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@bastionkey/relayer": "*",
+    "@bastionkey/tee-verifier": "*",
+    "chainsig.js": "^1.1.11",
+    "near-api-js": "^7.2.0",
+    "viem": "^2.21.0"
+  }
+}

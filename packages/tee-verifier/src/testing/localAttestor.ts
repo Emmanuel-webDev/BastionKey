@@ -7,7 +7,7 @@ import { buildRequestBody, type VerifierInput } from "../prompt.js";
 import { readVerdict, signedText, type Attestation } from "../teeAttestation.js";
 import type { Verifier, VerifierResult } from "../semanticChecker.js";
 
-export const LOCAL_ATTESTOR_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as const;
+export const LOCAL_ATTESTOR_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as const; // gitleaks:allow - Hardhat/Anvil well-known test key for offline tests
 export const LOCAL_ATTESTOR_MODEL = "bastionkey-local/rule-verifier";
 
 /** Dollar amounts mentioned in a task: "$10", "10 USDC", "10.50 usdc" */

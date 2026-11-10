@@ -8,6 +8,8 @@
   "workspaces": [
     "packages/tee-verifier",
     "packages/relayer",
+    "packages/client",
+    "packages/cli",
     "packages/web-dashboard"
   ],
   "scripts": {
@@ -16,11 +18,14 @@
     "test:ts": "vitest run",
     "test": "npm run test:contract && npm run test:ts",
     "gen:vectors": "tsx scripts/gen-vectors.ts",
-    "demo:valid": "tsx scripts/demo-valid-spend.ts",
-    "demo:overbudget": "tsx scripts/demo-overbudget-spend.ts",
-    "demo:injected": "tsx scripts/demo-injected-spend.ts",
-    "demo:all": "npm run demo:valid && npm run demo:overbudget && npm run demo:injected",
-    "dashboard": "npm --workspace packages/web-dashboard run dev"
+    "scenario:valid": "tsx scenarios/scenario-valid.ts",
+    "scenario:overbudget": "tsx scenarios/scenario-overbudget.ts",
+    "scenario:injected": "tsx scenarios/scenario-injected.ts",
+    "scenario:all": "npm run scenario:valid && npm run scenario:overbudget && npm run scenario:injected",
+    "scenario:offline": "tsx scenarios/scenario-offline.ts",
+    "bastion": "tsx packages/cli/bin/bastion.js",
+    "dashboard": "npm --workspace packages/web-dashboard run dev",
+    "build:dashboard": "npm --workspace packages/web-dashboard run build"
   },
   "devDependencies": {
     "@noble/curves": "^1.9.7",

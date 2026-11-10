@@ -53,6 +53,7 @@ export class NearAiVerifier implements Verifier {
         "x-no-aliasing": "true",
       },
       body: requestBody,
+      signal: AbortSignal.timeout(30000),
     });
     if (!res.ok) {
       const errText = await res.text();
@@ -64,7 +65,7 @@ export class NearAiVerifier implements Verifier {
 
     const sigRes = await f(
       `${base}/v1/signature/${encodeURIComponent(chatId)}?model=${encodeURIComponent(this.cfg.model)}&signing_algo=ecdsa`,
-      { headers: auth },
+      { headers: auth, signal: AbortSignal.timeout(30000) },
     );
     if (!sigRes.ok) {
       const errText = await sigRes.text();

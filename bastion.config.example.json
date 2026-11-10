@@ -1,0 +1,30 @@
+{
+  "networkId": "testnet",
+  "nearRpcUrl": "https://rpc.testnet.near.org",
+  "contractId": "your-contract.testnet",
+  "agentId": "your-agent.testnet",
+  "signerContract": "v1.signer-prod.testnet",
+  "derivationPath": "agent-session-1",
+  "nearAiModel": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "auditLogPath": "./bastion-audit.jsonl",
+  "chain": {
+    "chainId": 84532,
+    "name": "Base Sepolia",
+    "rpcUrl": "https://sepolia.base.org",
+    "explorerUrl": "https://sepolia.basescan.org",
+    "tokens": [
+      {
+        "symbol": "USDC",
+        "address": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        "decimals": 6
+      }
+    ]
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8443,
+    "maxRequestBytes": 65536,
+    "rateLimitPerMinute": 60
+  }
+}
+

@@ -1,10 +1,18 @@
 node_modules/
 target/
 .next/
+out/
 dist/
 .env
-.env.local
+.env.*
+!.env.example
 *.log
 .DS_Store
+*.key
+*.pem
+*credentials*.json
 # hackathon submission payload contains personal data, never commit it
 submission.json
+.fresh-clone-test/
+.bastion-cache/
+bastion-audit.jsonl

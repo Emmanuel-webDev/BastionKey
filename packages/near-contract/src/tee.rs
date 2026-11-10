@@ -1,15 +1,15 @@
 //! Verification of NEAR AI Cloud response signatures, on chain.
 //!
-//! NEAR AI Cloud signs `text` with an ECDSA key whose address is bound to a hardware attestation
-//! (Intel TDX + NVIDIA). The signed text, per the NEAR AI Cloud docs, is:
+//! NEAR AI Cloud signs `text` with an ECDSA key whose address is reported by its attestation
+//! endpoint. The signed text, per the NEAR AI Cloud docs, is:
 //!   provider_tee: "<MODEL_ID>:<sha256(request_body)>:<sha256(response_body)>"
 //!   gateway:      "<sha256(request_body)>:<sha256(response_body)>"
 //! and the signature is an Ethereum EIP-191 personal-message signature.
 //!
 //! This module re-derives that text from the raw request and response bytes it is handed, recovers
-//! the signer, and compares it with the TEE signing address the contract owner pinned after
-//! verifying the hardware attestation off chain. It then reads the verdict out of the signed
-//! response and checks it is bound to the exact transaction digest being signed.
+//! the signer, and compares it with the provider signing address the contract owner pinned.
+//! It then reads the verdict out of the signed response and checks it is bound to the exact
+//! transaction digest being signed.
 
 use near_sdk::json_types::Base64VecU8;
 use near_sdk::serde_json::{self, Value};

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: bastionkey-dashboard
+    runtime: static
+    buildCommand: npm ci && npm --workspace packages/web-dashboard run build
+    staticPublishPath: ./packages/web-dashboard/out
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+

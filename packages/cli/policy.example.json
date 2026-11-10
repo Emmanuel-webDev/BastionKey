@@ -1,0 +1,28 @@
+{
+  "$schema": "./src/policySchema.json",
+  "version": "1.0",
+  "token": {
+    "symbol": "USDC",
+    "address": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "decimals": 6
+  },
+  "limits": {
+    "maxPerTxUsd": 50.0,
+    "hourlyBudgetUsd": 100.0,
+    "teeRequiredAboveUsd": 0.0,
+    "maxGasCostGwei": 10000000.0
+  },
+  "rules": {
+    "allowedTokens": [
+      "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+    ],
+    "allowedRecipients": [
+      "0x1111111111111111111111111111111111111111"
+    ],
+    "allowedChains": [
+      84532
+    ],
+    "minConfidencePct": 80,
+    "maxCallsPerMinute": 20
+  }
+}

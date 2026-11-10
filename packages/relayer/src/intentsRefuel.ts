@@ -6,7 +6,7 @@
  *
  * Only `dry: true` quotes are issued here: no deposit address is created and nothing moves.
  * NEAR Intents has no testnet (see the hackathon rules, Q-007), so live swaps are out of scope for
- * the automated demos.
+ * the automated test scenarios.
  */
 const DEFAULT_BASE = "https://1click.chaindefuser.com";
 

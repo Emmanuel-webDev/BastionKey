@@ -1,0 +1,8 @@
+# Gitleaks ignore file for BastionKey
+# Hardhat/Anvil account #1 well-known deterministic test key used for offline unit tests and vectors only
+packages/tee-verifier/src/testing/localAttestor.ts:generic-api-key:10
+scripts/gen-vectors.ts:generic-api-key:70
+packages/tee-verifier/src/localAttestor.ts:generic-api-key:15
+593efa03:scripts/gen-vectors.ts:generic-api-key:70
+593efa03:packages/tee-verifier/src/localAttestor.ts:generic-api-key:15
+

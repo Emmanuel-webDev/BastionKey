@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BastionKeyPolicy",
+  "description": "User-defined on-chain financial and semantic security policy for autonomous agents.",
+  "type": "object",
+  "required": ["token", "limits", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "string" },
+    "token": {
+      "type": "object",
+      "required": ["address", "decimals"],
+      "additionalProperties": false,
+      "properties": {
+        "symbol": { "type": "string" },
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "description": "ERC-20 token contract address"
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18,
+          "description": "Token base unit decimals"
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "required": ["maxPerTxUsd", "hourlyBudgetUsd"],
+      "additionalProperties": false,
+      "properties": {
+        "maxPerTxUsd": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Per-transaction spending cap in USD"
+        },
+        "hourlyBudgetUsd": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Rolling 1-hour total spending budget in USD"
+        },
+        "teeRequiredAboveUsd": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Transactions above this USD amount strictly require TEE semantic verification (0 = always required)"
+        },
+        "maxGasCostGwei": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 10000000,
+          "description": "Maximum allowed transaction gas cost in Gwei"
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "required": ["allowedTokens", "allowedRecipients", "allowedChains", "minConfidencePct", "maxCallsPerMinute"],
+      "additionalProperties": false,
+      "properties": {
+        "allowedTokens": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+          "minItems": 1,
+          "description": "Allow-listed ERC-20 contract addresses"
+        },
+        "allowedRecipients": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+          "description": "Allow-listed recipient addresses. Empty array means open allow-list with mandatory TEE attestation."
+        },
+        "allowedChains": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 1,
+          "description": "Allow-listed EVM chain IDs (e.g. 84532 for Base Sepolia)"
+        },
+        "minConfidencePct": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Minimum TEE model confidence score (0-100) required to permit execution"
+        },
+        "maxCallsPerMinute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Circuit breaker velocity threshold: freezes agent if exceeded inside 60 seconds"
+        }
+      }
+    }
+  }
+}

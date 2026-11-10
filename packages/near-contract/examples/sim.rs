@@ -1,7 +1,7 @@
-//! Native simulator harness for the demo scripts.
+//! Native simulator harness for offline scenario tests.
 //!
 //! Runs the *actual* `BastionKey` contract code (the same code that compiles to wasm) under
-//! near-sdk's mock VM, driven by JSON lines on stdin. It exists so the demos are reproducible by
+//! near-sdk's mock VM, driven by JSON lines on stdin. It exists so the scenarios are reproducible by
 //! anyone with just `cargo` and `node`, with no NEAR account or API key.
 //!
 //! It is NOT a blockchain: there is no consensus and no real MPC network. When the contract

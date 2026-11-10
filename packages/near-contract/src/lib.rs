@@ -144,7 +144,7 @@ struct Approved {
 pub struct BastionKey {
     owner: AccountId,
     signer_contract: AccountId,
-    /// ECDSA address of the NEAR AI Cloud model TEE, pinned after verifying its hardware attestation
+    /// ECDSA address of the NEAR AI Cloud model signer, pinned by the contract owner
     provider_tee_signer: Option<[u8; 20]>,
     /// ECDSA address of the NEAR AI Cloud gateway TEE. Unset by default, which rejects gateway kind.
     gateway_signer: Option<[u8; 20]>,
